@@ -101,6 +101,107 @@ func TestConvertString_WindowsCarriageReturn(t *testing.T) {
 	}
 }
 
+func TestConvertString_LiteralBellCharacter(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		input    string
+		expected string
+	}{
+		{
+			desc:     "standalone bell character entity",
+			input:    "<p>&#7;</p>",
+			expected: "\ufffd",
+		},
+		{
+			desc:     "standalone bell literal byte",
+			input:    "<p>\a</p>",
+			expected: "\ufffd",
+		},
+		{
+			desc:     "bell at end of text",
+			input:    "<p>a&#7;</p>",
+			expected: "a\ufffd",
+		},
+		{
+			desc:     "bell at end of text literal byte",
+			input:    "<p>a\a</p>",
+			expected: "a\ufffd",
+		},
+		{
+			desc:     "bell at start of text",
+			input:    "<p>&#7;a</p>",
+			expected: "\ufffda",
+		},
+		{
+			desc:     "bell adjacent to strong emphasis",
+			input:    "<p>&#7;<strong>bold</strong></p>",
+			expected: "\ufffd**bold**",
+		},
+		{
+			desc:     "bell adjacent to strong emphasis literal byte",
+			input:    "<p>\a<strong>bold</strong></p>",
+			expected: "\ufffd**bold**",
+		},
+		{
+			desc:     "bell adjacent to italic emphasis",
+			input:    "<p>&#7;<em>italic</em></p>",
+			expected: "\ufffd*italic*",
+		},
+		{
+			desc:     "bell adjacent to italic emphasis literal byte",
+			input:    "<p>\a<em>italic</em></p>",
+			expected: "\ufffd*italic*",
+		},
+		{
+			desc:     "bell inside strong element",
+			input:    "<p><strong>&#7;bold</strong></p>",
+			expected: "**\ufffdbold**",
+		},
+		{
+			desc:     "bell inside italic element",
+			input:    "<p><em>&#7;italic</em></p>",
+			expected: "*\ufffditalic*",
+		},
+		{
+			desc:     "bell adjacent to link",
+			input:    `<p>&#7;<a href="https://example.com">link</a></p>`,
+			expected: "\ufffd[link](https://example.com)",
+		},
+		{
+			desc:     "bell inside inline code",
+			input:    "<p><code>&#7;</code></p>",
+			expected: "`\ufffd`",
+		},
+		{
+			desc:     "multiple bell characters",
+			input:    "<p>&#7;&#7;&#7;</p>",
+			expected: "\ufffd\ufffd\ufffd",
+		},
+		{
+			desc:     "multiple bell characters literal bytes",
+			input:    "<p>\a\a\a</p>",
+			expected: "\ufffd\ufffd\ufffd",
+		},
+		{
+			desc:     "bell adjacent to heading",
+			input:    "<h1>&#7;Heading</h1>",
+			expected: "# \ufffdHeading",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			output, err := htmltomarkdown.ConvertString(tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output != tc.expected {
+				t.Errorf("expected %q but got %q", tc.expected, output)
+			}
+		})
+	}
+}
+
 func TestDataRaceDetector(t *testing.T) {
 	conv := converter.NewConverter(
 		converter.WithPlugins(

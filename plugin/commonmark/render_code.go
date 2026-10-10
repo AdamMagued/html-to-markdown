@@ -134,7 +134,12 @@ func getCodeWithoutTags(startNode *html.Node) ([]byte, string) {
 			// if strings.TrimSpace(n.Data) == "" && strings.Contains(n.Data, "\n") {
 			// 	buf.WriteString("\n")
 			// }
-			buf.WriteString(n.Data)
+			data := n.Data
+			if strings.Contains(data, "\x00") || strings.Contains(data, string(marker.MarkerEscaping)) {
+				data = strings.ReplaceAll(data, "\x00", "\ufffd")
+				data = strings.ReplaceAll(data, string(marker.MarkerEscaping), "\ufffd")
+			}
+			buf.WriteString(data)
 			return
 		}
 

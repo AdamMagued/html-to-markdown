@@ -53,3 +53,60 @@ func TestUnEscapeContent(t *testing.T) {
 		t.Error("expected different characters")
 	}
 }
+
+func TestEscapeContent_SanitizePlaceholderByte(t *testing.T) {
+	conv := NewConverter()
+	conv.Register.EscapedChar('*')
+
+	testCases := []struct {
+		name     string
+		input    []byte
+		expected []byte
+	}{
+		{
+			name:     "standalone placeholder byte",
+			input:    []byte{placeholderByte},
+			expected: []byte(string('\ufffd')),
+		},
+		{
+			name:     "null byte",
+			input:    []byte{'\u0000'},
+			expected: []byte(string('\ufffd')),
+		},
+		{
+			name:     "placeholder byte before text",
+			input:    []byte{placeholderByte, 'b', 'o', 'l', 'd'},
+			expected: append([]byte(string('\ufffd')), 'b', 'o', 'l', 'd'),
+		},
+		{
+			name:     "placeholder byte after text",
+			input:    []byte{'t', 'e', 'x', 't', placeholderByte},
+			expected: append([]byte("text"), []byte(string('\ufffd'))...),
+		},
+		{
+			name:     "placeholder byte between text",
+			input:    []byte{'a', placeholderByte, 'b'},
+			expected: append(append([]byte("a"), []byte(string('\ufffd'))...), 'b'),
+		},
+		{
+			name:     "placeholder byte adjacent to escaped char",
+			input:    []byte{placeholderByte, '*'},
+			expected: append([]byte(string('\ufffd')), placeholderByte, '*'),
+		},
+		{
+			name:     "multiple placeholder bytes",
+			input:    []byte{placeholderByte, placeholderByte, placeholderByte},
+			expected: []byte(string("\ufffd\ufffd\ufffd")),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			output := conv.escapeContent(tc.input)
+			if string(output) != string(tc.expected) {
+				t.Errorf("expected %q, got %q", string(tc.expected), string(output))
+			}
+		})
+	}
+}
+

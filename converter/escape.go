@@ -26,6 +26,12 @@ func (conv *Converter) escapeContent(chars []byte) []byte {
 			newChars = append(newChars, []byte(string('\ufffd'))...)
 			continue
 		}
+		if chars[index] == placeholderByte {
+			// Sanitize input bytes matching internal escape placeholder marker (U+0007)
+			// to prevent confusion with internal escaping markers.
+			newChars = append(newChars, []byte(string('\ufffd'))...)
+			continue
+		}
 
 		r, _ := utf8.DecodeRune(chars[index:])
 
